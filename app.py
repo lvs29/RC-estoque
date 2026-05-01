@@ -69,10 +69,17 @@ def index():
 @app.route("/login")
 def index_login():
     return render_template("login.html")
+
 @app.route("/perfil")
 @requer_login
 def profile_page():
     return render_template("profile.html")
+
+@app.route("/reservas")
+@requer_login
+def reservas_page():
+    return render_template("reservas.html")
+
 @app.route("/manage")
 @requer_admin
 def admin_page():
@@ -428,6 +435,12 @@ def patch_devolver(reserva_id):
         abort(404, "Reserva não encontrada")
     return jsonify(marcar_devolvido(reserva_id))
 
+@app.route("/api/reservas/<int:reserva_id>/entregar", methods=["PATCH"])
+@requer_admin
+def patch_entregar(reserva_id):
+    if not buscar_reserva(reserva_id):
+        abort(404, "Reserva não encontrada")
+    return jsonify(marcar_entregue(reserva_id))
 
 @app.route("/api/reservas/<int:reserva_id>", methods=["DELETE"])
 @requer_login

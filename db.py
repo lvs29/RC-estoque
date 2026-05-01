@@ -480,7 +480,7 @@ def reserva_atrasada(reserva: dict) -> bool:
     return date.fromisoformat(reserva["data_devolucao"]) < date.today()
 
 
-def marcar_entrege(reserva_id: int) -> dict | None:
+def marcar_entregue(reserva_id: int) -> dict | None:
     db = get_db()
     try:
         r = db.query(Reserva).get(reserva_id)

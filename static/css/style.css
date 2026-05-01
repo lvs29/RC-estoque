@@ -1,0 +1,114 @@
+:root {
+    --bg-color: #0d0d0f;
+    --header-color: rgba(0, 0, 0, 0.5);
+    --fg-grey: #191c28;
+    --accent-blue: #00c8d4;
+    --accent-yellow: #f5c400;
+    --accent-red: #ff4c4c;
+    --text-1-color: #fff;
+    --text-2-color: #b0b8d0;
+    --popup-bg: #111115;
+    --border-color: #33333c;
+    --border-hover: #2a2a32;
+    --text-dark: #0d0d0f;
+}
+
+* {
+    font-family: "Chakra Petch", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    margin: 0;
+    color: var(--text-1-color);
+}
+
+body {
+    background-color: var(--bg-color);
+}
+
+header {
+    background-color: var(--header-color);
+    height: 6rem;
+    width: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-left: 5rem;
+    padding-right: 5rem;
+}
+.logo {
+    font-size: 2rem;
+}
+nav {
+    display: flex;
+    gap: 2rem;
+    font-size: 1.25rem;
+}
+nav a {
+    color: var(--accent-blue);
+    text-decoration: none;
+}
+nav a i {
+    color: var(--accent-blue);
+    margin-right: 5px;
+}
+nav a::before {
+    content: "";
+    display: block;
+    width: 0;
+    height: 2px;
+    background: var(--accent-blue);
+    transform: translateY(26px);
+    transition: width .3s;
+}
+nav a:hover::before {
+    width: 100%;
+}
+
+.logo a {
+    height: fit-content;
+    display: flex;
+    align-items: center;
+}
+.logo a img {
+    height: 4.5rem;
+}
+
+/* Floating Label Inputs */
+.group {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.input {
+    display: flex;
+    justify-self: center;
+    font-size: 16px;
+    padding: 0.9rem 1rem;
+    display: block;
+    width: 95%;
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    background: var(--bg-color);
+    color: var(--text-1-color);
+}
+
+.input:focus {
+    outline: none;
+}
+
+.group label {
+    color: var(--text-2-color);
+    font-size: 18px;
+    font-weight: normal;
+    position: absolute;
+    pointer-events: none;
+    left: 1rem;
+    top: 0.9rem;
+    transition: 0.2s ease all;
+}
+
+.input:focus ~ label, .input:valid ~ label {
+    top: -20px;
+    font-size: 14px;
+    color: var(--accent-blue);
+}

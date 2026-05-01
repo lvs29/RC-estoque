@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerenciamento</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="static/css/style.css">
+  <link rel="stylesheet" href="static/css/manage.css">
+  <link rel="shortcut icon" href="/static/img/favicon.png" type="image/x-icon">
+</head>
+<body>
+<header>
+  <div class="logo">
+    <a href="/">
+      <img src="static/img/logo.webp" alt="logo">
+    </a>
+  </div>
+  <div></div>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/login">Login</a>
+  </nav>
+</header>
+
+<main>
+  <h1>Gerenciamento</h1>
+  <p class="help">Use esta tela para consultar e administrar usuários, peças e reservas.</p>
+
+  <div class="admin-grid">
+    <section class="admin-card">
+      <h2>Usuários</h2>
+      <div class="form-group">
+        <input id="criar-u-nome" type="text" placeholder="Nome">
+        <input id="criar-u-username" type="text" placeholder="Username">
+        <input id="criar-u-senha" type="password" placeholder="Senha">
+        <select id="criar-u-role">
+          <option value="user">Usuário</option>
+          <option value="admin">Administrador</option>
+        </select>
+        <button id="criar-usuario-btn">Criar usuário</button>
+      </div>
+      <div>
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Nome</th><th>Username</th><th>Role</th><th>Ações</th></tr>
+          </thead>
+          <tbody id="usuarios-tabela"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="admin-card">
+      <h2>Peças</h2>
+      <div class="form-group">
+        <input id="criar-peca-nome" type="text" placeholder="Nome da peça *">
+        <textarea id="criar-peca-descricao" placeholder="Descrição" rows="3"></textarea>
+        <input id="criar-peca-quantidade" type="number" placeholder="Quantidade" min="0">
+        <input id="criar-peca-foto" type="file" accept="image/*">
+        <button id="criar-peca-btn">Salvar peça</button>
+      </div>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Nome</th><th>Qtd</th><th>Descrição</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="pecas-tabela"></tbody>
+      </table>
+    </section>
+
+    <section class="admin-card">
+      <h2>Reservas</h2>
+      <p class="small-note">Como administrador você vê todas as reservas.</p>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Peça</th><th>Solicitante</th><th>Retirada</th><th>Devolução</th><th>Qtd</th><th>Status</th></tr>
+        </thead>
+        <tbody id="reservas-tabela"></tbody>
+      </table>
+    </section>
+  </div>
+</main>
+
+<script src="static/js/api.js"></script>
+<script src="static/js/app.js"></script>
+</body>
+</html>

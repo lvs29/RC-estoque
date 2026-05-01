@@ -29,10 +29,203 @@ async function renderPecas(pecas) {
             </div>
             <p class="nome">${peca.nome}</p>
             <p class="desc">${peca.descricao}</p>
-            <button class="add" ${isOut ? "disabled" : ""}>${isOut ? "Sem estoque" : "Adicionar +"}</button>
+            <button class="add" ${isOut ? "disabled" : ""} data-peca-id="${peca.id}" data-peca-nome="${peca.nome}">${isOut ? "Sem estoque" : "Adicionar +"}</button>
         `;
         grid.appendChild(card);
+        
+        const btn = card.querySelector(".add");
+        if (!isOut) {
+            btn.addEventListener("click", () => openAddToCartPopup(peca));
+        }
     });
+}
+
+// ─── Cart (Carrinho de Reservas) ────────────────────────────────────────────
+
+let carrinhoReserva = {
+    itens: [],
+    data_retirada: null,
+    data_devolucao: null,
+    observacoes: ""
+};
+
+function openAddToCartPopup(peca) {
+    if (!usuarioAtual) {
+        showMessagePopup("Você precisa estar logado para fazer reservas", true);
+        return;
+    }
+    
+    const overlay = document.createElement("div");
+    overlay.className = "add-cart-overlay";
+
+    const popup = document.createElement("div");
+    popup.className = "add-cart-popup";
+
+    popup.innerHTML = `
+        <h3>${peca.nome}</h3>
+        <p>Disponível: ${peca.quantidade} unidades</p>
+        
+        <label>Quantidade *</label>
+        <input type="number" id="cart-qty" min="1" max="${peca.quantidade}" value="1">
+
+        <div class="add-cart-buttons">
+            <button id="cart-cancel" class="add-cart-cancel">Cancelar</button>
+            <button id="cart-add" class="add-cart-confirm">Adicionar ao carrinho</button>
+        </div>
+    `;
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    document.getElementById("cart-cancel").addEventListener("click", () => {
+        document.body.removeChild(overlay);
+    });
+
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) document.body.removeChild(overlay);
+    });
+
+    document.getElementById("cart-add").addEventListener("click", () => {
+        const quantidade = parseInt(document.getElementById("cart-qty").value);
+        if (quantidade < 1 || quantidade > peca.quantidade) {
+            showMessagePopup("Quantidade inválida", true);
+            return;
+        }
+        addToCart(peca.id, peca.nome, quantidade);
+        document.body.removeChild(overlay);
+    });
+}
+
+function addToCart(peca_id, peca_nome, quantidade) {
+    const existente = carrinhoReserva.itens.find(item => item.peca_id === peca_id);
+    if (existente) {
+        existente.quantidade += quantidade;
+    } else {
+        carrinhoReserva.itens.push({ peca_id, peca_nome, quantidade });
+    }
+    updateCartUI();
+    showMessagePopup(`${peca_nome} adicionado ao carrinho!`);
+}
+
+function removeFromCart(peca_id) {
+    carrinhoReserva.itens = carrinhoReserva.itens.filter(item => item.peca_id !== peca_id);
+    updateCartUI();
+}
+
+function updateCartUI() {
+    const container = document.getElementById("cart-container");
+    const count = document.getElementById("cart-count");
+    const totalItens = carrinhoReserva.itens.reduce((sum, item) => sum + item.quantidade, 0);
+    
+    if (totalItens > 0) {
+        container.style.display = "flex";
+        count.textContent = totalItens;
+    } else {
+        container.style.display = "none";
+    }
+}
+
+function openCartModal() {
+    if (!usuarioAtual) {
+        showMessagePopup("Você precisa estar logado para reservar", true);
+        return;
+    }
+    
+    if (carrinhoReserva.itens.length === 0) {
+        return;
+    }
+    
+    const overlay = document.createElement("div");
+    overlay.className = "cart-modal-overlay";
+
+    const modal = document.createElement("div");
+    modal.className = "cart-modal";
+
+    const itensHTML = carrinhoReserva.itens.map((item, idx) => `
+        <div class="cart-item">
+            <div class="cart-item-info">
+                <p class="cart-item-name">${item.peca_nome}</p>
+                <p class="cart-item-qty">Qtd: ${item.quantidade}</p>
+            </div>
+            <button onclick="removeFromCart(${item.peca_id}); document.querySelector('.cart-modal-overlay').parentNode.removeChild(document.querySelector('.cart-modal-overlay')); setTimeout(openCartModal, 100);" class="cart-item-remove">Remover</button>
+        </div>
+    `).join("");
+
+    modal.innerHTML = `
+        <h2>Resumo da Reserva</h2>
+        <div class="cart-modal-items">
+            ${itensHTML}
+        </div>
+
+        <label>Data de Retirada *</label>
+        <input type="date" id="modal-retirada" value="${carrinhoReserva.data_retirada || ''}">
+
+        <label>Data de Devolução *</label>
+        <input type="date" id="modal-devolucao" value="${carrinhoReserva.data_devolucao || ''}">
+
+        <label>Observações</label>
+        <textarea id="modal-obs" placeholder="Adicione observações...">${carrinhoReserva.observacoes}</textarea>
+
+        <div class="cart-modal-actions">
+            <button id="modal-cancel" class="cart-modal-cancel">Voltar</button>
+            <button id="modal-confirm" class="cart-modal-confirm">Confirmar Reserva</button>
+        </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    document.getElementById("modal-cancel").addEventListener("click", () => {
+        document.body.removeChild(overlay);
+    });
+
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) document.body.removeChild(overlay);
+    });
+
+    document.getElementById("modal-confirm").addEventListener("click", async () => {
+        const data_retirada = document.getElementById("modal-retirada").value;
+        const data_devolucao = document.getElementById("modal-devolucao").value;
+        const observacoes = document.getElementById("modal-obs").value;
+
+        if (!data_retirada || !data_devolucao) {
+            showMessagePopup("Datas de retirada e devolução são obrigatórias", true);
+            return;
+        }
+
+        carrinhoReserva.data_retirada = data_retirada;
+        carrinhoReserva.data_devolucao = data_devolucao;
+        carrinhoReserva.observacoes = observacoes;
+
+        await confirmarReserva();
+        document.body.removeChild(overlay);
+    });
+}
+
+async function confirmarReserva() {
+    const body = {
+        itens: carrinhoReserva.itens,
+        data_retirada: carrinhoReserva.data_retirada,
+        data_devolucao: carrinhoReserva.data_devolucao,
+    };
+    if (carrinhoReserva.observacoes.trim()) {
+        body.observacoes = carrinhoReserva.observacoes;
+    }
+
+    const { status, data } = await req("POST", "/api/reservas", body);
+    if (status === 201) {
+        showMessagePopup("Reserva confirmada com sucesso!");
+        carrinhoReserva = { itens: [], data_retirada: null, data_devolucao: null, observacoes: "" };
+        updateCartUI();
+    } else {
+        let msg = data.erro || data.description || "Erro ao criar reserva";
+        if (data.proxima_disponibilidade) {
+            const fmt = new Date(data.proxima_disponibilidade + "T00:00:00")
+                .toLocaleDateString("pt-BR");
+            msg += `\n\nEstoque disponível a partir de ${fmt}.`;
+        }
+        showMessagePopup(msg, true);  // usa msg, não data.description diretamente
+    }
 }
 
 function addPecaPopup() {
@@ -100,6 +293,14 @@ function renderNav() {
     nav.innerHTML = items
         .map(item => `<a href="${item.href}"><i class="${item.icon}"></i> ${item.label}</a>`)
         .join("");
+    
+    // Show/hide cart container based on login status
+    const cartContainer = document.getElementById("cart-container");
+    if (usuarioAtual && cartContainer) {
+        if (carrinhoReserva.itens.length > 0) {
+            cartContainer.style.display = "flex";
+        }
+    }
 }
 
 const output = document.getElementById("output");
@@ -137,17 +338,19 @@ function renderPecasAdmin(pecas) {
 
 function renderReservas(reservas) {
     const tbody = document.getElementById("reservas-tabela");
-    tbody.innerHTML = reservas.map(r => `
+    tbody.innerHTML = reservas.map(r => {
+        const itensStr = r.itens.map(item => `${item.peca_nome} (x${item.quantidade})`).join(", ");
+        return `
       <tr>
         <td>${r.id}</td>
-        <td>${r.peca_nome || r.peca_id}</td>
+        <td>${itensStr}</td>
         <td>${r.solicitante}</td>
         <td>${r.data_retirada}</td>
         <td>${r.data_devolucao || "—"}</td>
-        <td>${r.quantidade}</td>
+        <td>${r.itens.reduce((sum, item) => sum + item.quantidade, 0)}</td>
         <td>${r.devolvido ? "Devolvido" : r.retirado ? "Retirado" : "Pendente"}</td>
       </tr>
-    `).join("");
+    `}).join("");
 }
 
 async function loadUsuarios() {
@@ -214,22 +417,22 @@ async function initProfilePage() {
         const senhaConfirma = senhaConfirmaInput.value;
 
         if (!nome || !username) {
-            alert("Nome e username são obrigatórios");
+            showMessagePopup("Nome e username são obrigatórios", true);
             return;
         }
 
         // Validate password change
         if (senhaNova || senhaConfirma) {
             if (!senhaAtual) {
-                alert("Senha atual é obrigatória para mudar a senha");
+                showMessagePopup("Senha atual é obrigatória para mudar a senha", true);
                 return;
             }
             if (!senhaNova) {
-                alert("Digite a nova senha");
+                showMessagePopup("Digite a nova senha", true);
                 return;
             }
             if (senhaNova !== senhaConfirma) {
-                alert("As senhas não coincidem");
+                showMessagePopup("As senhas não coincidem", true);
                 return;
             }
         }
@@ -243,7 +446,7 @@ async function initProfilePage() {
         try {
             const res = await req("PUT", "/api/auth/me", updateData);
             if (res.status === 200) {
-                alert("Perfil atualizado com sucesso!");
+                showMessagePopup("Perfil atualizado com sucesso!");
                 // Clear password fields
                 senhaAtualInput.value = "";
                 senhaNovaInput.value = "";
@@ -252,11 +455,35 @@ async function initProfilePage() {
                 usuarioAtual = res.data;
                 renderNav();
             } else {
-                alert(res.data.erro || "Erro ao atualizar perfil");
+                showMessagePopup(res.data.erro || "Erro ao atualizar perfil", true);
             }
         } catch (err) {
-            alert(err.message);
+            showMessagePopup(err.message, true);
         }
+    });
+}
+
+function showMessagePopup(msg, isError = false) {
+    const overlay = document.createElement("div");
+    overlay.className = "message-popup-overlay";
+
+    const popup = document.createElement("div");
+    popup.className = "message-popup" + (isError ? " error" : "");
+
+    popup.innerHTML = `
+        <p>${msg}</p>
+        <button id="message-popup-close">OK</button>
+    `;
+
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+
+    document.getElementById("message-popup-close").addEventListener("click", () => {
+        document.body.removeChild(overlay);
+    });
+
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) document.body.removeChild(overlay);
     });
 }
 
@@ -276,5 +503,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     if (document.getElementById("profile-form")) {
         await initProfilePage();
+    }
+    
+    // Cart button listener
+    const cartBtn = document.getElementById("cart-btn");
+    if (cartBtn) {
+        cartBtn.addEventListener("click", openCartModal);
     }
 });

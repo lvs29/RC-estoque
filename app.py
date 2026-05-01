@@ -233,7 +233,6 @@ def get_disponibilidade(peca_id):
         "disponivel": disponibilidade_peca(peca_id, data),
     })
 
-
 @app.route("/api/pecas", methods=["POST"])
 @requer_admin
 def post_peca():
@@ -341,22 +340,28 @@ def post_reserva():
     """
     Valida disponibilidade antes de criar.
     Solicitante é sempre o usuário logado.
-    Body: { peca_id, data_retirada, data_devolucao, quantidade?, observacoes? }
+    Body: { itens: [{peca_id, quantidade}], data_retirada, data_devolucao, observacoes? }
     """
     dados = request.get_json(force=True) or {}
-    peca_id = dados.get("peca_id")
+    itens = dados.get("itens", [])
     data_retirada = dados.get("data_retirada", "").strip()
     data_devolucao = dados.get("data_devolucao", "").strip()
-    quantidade = int(dados.get("quantidade", 1))
 
-    if not peca_id:
-        abort(400, "peca_id é obrigatório")
+    if not itens:
+        abort(400, "itens é obrigatório e deve ser uma lista não vazia")
     if not data_retirada:
         abort(400, "data_retirada é obrigatório")
     if not data_devolucao:
         abort(400, "data_devolucao é obrigatório")
-    if not buscar_peca(peca_id):
-        abort(404, "Peça não encontrada")
+
+    # Validar itens
+    for item in itens:
+        peca_id = item.get("peca_id")
+        quantidade = item.get("quantidade", 1)
+        if not peca_id or not isinstance(quantidade, int) or quantidade < 1:
+            abort(400, "Cada item deve ter peca_id e quantidade >= 1")
+        if not buscar_peca(peca_id):
+            abort(404, f"Peça {peca_id} não encontrada")
 
     # antecedência mínima de 24h
     hoje = date.today()
@@ -369,19 +374,29 @@ def post_reserva():
 
     solicitante = request.usuario["nome"]
 
-    disponivel = disponibilidade_peca(peca_id, data_retirada)
-    if disponivel < quantidade:
-        abort(409, f"Estoque insuficiente em {data_retirada}: {disponivel} disponível(is), {quantidade} solicitado(s)")
+    # Verificar disponibilidade para cada item (já feito em criar_reserva, mas ok)
 
-    reserva = criar_reserva(
-        peca_id=int(peca_id),
-        solicitante=solicitante,
-        data_retirada=data_retirada,
-        data_devolucao=data_devolucao,
-        quantidade=quantidade,
-        observacoes=dados.get("observacoes"),
-        usuario_id=request.usuario["id"],
-    )
+    try:
+        reserva = criar_reserva(
+            itens=itens,
+            solicitante=solicitante,
+            data_retirada=data_retirada,
+            data_devolucao=data_devolucao,
+            observacoes=dados.get("observacoes"),
+            usuario_id=request.usuario["id"],
+        )
+    except ValueError as e:
+        # extrai o peca_id do primeiro item com problema
+        peca_id = next(
+            (i["peca_id"] for i in itens if disponibilidade_peca(i["peca_id"], data_retirada) < i["quantidade"]),
+            None
+        )
+        proxima = proxima_disponibilidade(peca_id, data_retirada) if peca_id else None
+        return jsonify({
+            "erro": str(e),
+            "proxima_disponibilidade": proxima
+        }), 409
+
     return jsonify(reserva), 201
 
 

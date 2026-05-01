@@ -9,6 +9,19 @@ main h1 {
     letter-spacing: 0.08em;
 }
 
+.cart-btn {
+    background: var(--accent-blue);
+    color: var(--text-1-color);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .card-grid {
     padding: 2rem;
     display: grid;
@@ -207,5 +220,233 @@ main h1 {
 }
 
 #popup-salvar:hover {
+    opacity: 0.85;
+}
+
+/* ─── Add to Cart Popup Styles ─────────────────────────────────────────────── */
+
+.add-cart-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 500;
+}
+
+.add-cart-popup {
+    background: var(--popup-bg);
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 400px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    border-top: 2px solid var(--accent-blue);
+}
+
+.add-cart-popup h3 {
+    color: var(--accent-blue);
+    margin-bottom: 10px;
+}
+
+.add-cart-popup p {
+    color: var(--text-2-color);
+    margin-bottom: 15px;
+}
+
+.add-cart-popup label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-1-color);
+}
+
+.add-cart-popup input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-color);
+    color: var(--text-1-color);
+    margin-bottom: 15px;
+    box-sizing: border-box;
+}
+
+.add-cart-popup input:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+}
+
+.add-cart-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.add-cart-buttons button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.2s;
+}
+
+.add-cart-cancel {
+    background: var(--border-color);
+    color: var(--text-1-color);
+}
+
+.add-cart-cancel:hover {
+    opacity: 0.85;
+}
+
+.add-cart-confirm {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+}
+
+.add-cart-confirm:hover {
+    opacity: 0.85;
+}
+
+/* ─── Cart Modal Styles ────────────────────────────────────────────────────── */
+
+.cart-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 600;
+    overflow: auto;
+}
+
+.cart-modal {
+    background: var(--popup-bg);
+    padding: 30px;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    max-height: 80vh;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-top: 2px solid var(--accent-yellow);
+}
+
+.cart-modal h2 {
+    color: var(--accent-yellow);
+    margin-bottom: 20px;
+}
+
+.cart-modal-items {
+    margin: 20px 0;
+}
+
+.cart-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.cart-item-info {
+    flex: 1;
+}
+
+.cart-item-name {
+    margin: 0;
+    font-weight: bold;
+    color: var(--text-1-color);
+}
+
+.cart-item-qty {
+    margin: 5px 0 0 0;
+    color: var(--text-2-color);
+}
+
+.cart-item-remove {
+    background: var(--accent-red);
+    color: var(--text-1-color);
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.cart-item-remove:hover {
+    opacity: 0.85;
+}
+
+.cart-modal label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-1-color);
+    margin-top: 20px;
+}
+
+.cart-modal input,
+.cart-modal textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-color);
+    color: var(--text-1-color);
+    box-sizing: border-box;
+}
+
+.cart-modal input:focus,
+.cart-modal textarea:focus {
+    outline: none;
+    border-color: var(--accent-yellow);
+}
+
+.cart-modal textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.cart-modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.cart-modal-actions button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.2s;
+}
+
+.cart-modal-cancel {
+    background: var(--border-color);
+    color: var(--text-1-color);
+}
+
+.cart-modal-cancel:hover {
+    opacity: 0.85;
+}
+
+.cart-modal-confirm {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+}
+
+.cart-modal-confirm:hover {
     opacity: 0.85;
 }

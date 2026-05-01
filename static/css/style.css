@@ -5,6 +5,7 @@
     --accent-blue: #00c8d4;
     --accent-yellow: #f5c400;
     --accent-red: #ff4c4c;
+    --accent-green: #4caf50;
     --text-1-color: #fff;
     --text-2-color: #b0b8d0;
     --popup-bg: #111115;
@@ -111,4 +112,62 @@ nav a:hover::before {
     top: -20px;
     font-size: 14px;
     color: var(--accent-blue);
+}
+
+/* ─── Message Popup Styles ─────────────────────────────────────────────────── */
+
+.message-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.message-popup {
+    background: var(--popup-bg);
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 2px solid var(--accent-green);
+}
+
+.message-popup.error {
+    border-color: var(--accent-red);
+}
+
+.message-popup p {
+    margin: 0 0 20px 0;
+    color: var(--accent-green);
+}
+
+.message-popup.error p {
+    color: var(--accent-red);
+}
+
+.message-popup button {
+    background: var(--accent-green);
+    color: var(--text-dark);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: opacity 0.2s;
+}
+
+.message-popup.error button {
+    background: var(--accent-red);
+    color: var(--text-1-color);
+}
+
+.message-popup button:hover {
+    opacity: 0.85;
 }

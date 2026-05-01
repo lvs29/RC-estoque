@@ -22,12 +22,10 @@ async function req(method, url, body = null, isForm = false) {
 
     const res = await fetch(url, opts);
 
-    if (!res.ok && res.status !== 401) {
-        // deixa o chamador tratar 401, lança o resto
+    if (!res.ok && res.status !== 401 && res.status !== 409) {
         const json = await res.json().catch(() => ({}));
         throw Object.assign(new Error(json.mensagem || "Erro desconhecido"), { status: res.status });
     }
-
     return { status: res.status, data: await res.json().catch(() => ({})) };
 }
 
@@ -50,7 +48,7 @@ async function fazerLogin() {
     const username = v("login-username");
     const senha = v("login-senha");
 
-    if (!username || !senha) return alert("Preencha username e senha");
+    if (!username || !senha) return showMessagePopup("Preencha username e senha", true);
 
     try {
         const { status, data } = await req("POST", "/api/auth/login", { username, senha });
@@ -58,10 +56,10 @@ async function fazerLogin() {
         if (status === 200) {
             window.location.href = "/";
         } else {
-            alert(data.mensagem || "Credenciais inválidas");
+            showMessagePopup(data.mensagem || "Credenciais inválidas", true);
         }
     } catch (err) {
-        alert(err.message);
+        showMessagePopup(err.message, true);
     }
 }
 
@@ -77,13 +75,13 @@ async function criarUsuario() {
     const nome = v("criar-u-nome").trim();
     const username = v("criar-u-username").trim();
     const senha = v("criar-u-senha");
-    if (!nome || !username || !senha) return alert("nome, username e senha são obrigatórios");
+    if (!nome || !username || !senha) return showMessagePopup("nome, username e senha são obrigatórios", true);
     return await req("POST", "/api/usuarios", { nome, username, senha, role: v("criar-u-role") });
 }
 
 function atualizarUsuario() {
     const id = v("upd-uid");
-    if (!id) return alert("Informe o ID");
+    if (!id) return showMessagePopup("Informe o ID", true);
     const body = {};
     if (v("upd-u-nome").trim()) body.nome = v("upd-u-nome").trim();
     if (v("upd-u-username").trim()) body.username = v("upd-u-username").trim();
@@ -94,7 +92,7 @@ function atualizarUsuario() {
 
 function deletarUsuario() {
     const id = v("del-uid");
-    if (!id) return alert("Informe o ID");
+    if (!id) return showMessagePopup("Informe o ID", true);
     if (!confirm(`Deletar usuário ${id}?`)) return;
     req("DELETE", `/api/usuarios/${id}`);
 }
@@ -108,13 +106,13 @@ function listarPecas() {
 function checarDisponibilidade() {
     const id = v("disp-peca-id");
     const data = v("disp-data");
-    if (!id || !data) return alert("ID e data são obrigatórios");
+    if (!id || !data) return showMessagePopup("ID e data são obrigatórios", true);
     req("GET", `/api/pecas/${id}/disponibilidade?data=${data}`);
 }
 
 async function criarPeca() {
     const nome = v("criar-peca-nome").trim();
-    if (!nome) return alert("Nome é obrigatório");
+    if (!nome) return showMessagePopup("Nome é obrigatório", true);
     const foto = document.getElementById("criar-peca-foto").files[0];
     const form = new FormData();
     form.append("nome", nome);
@@ -122,12 +120,12 @@ async function criarPeca() {
     form.append("quantidade", v("criar-peca-quantidade") || 0);
     if (foto) form.append("foto", foto);
     const { status, data } = await req("POST", "/api/pecas", form, true);
-    if (status === 409) return alert(data.erro || "Nome já existe");
+    if (status === 409) return showMessagePopup(data.erro || "Nome já existe", true);
 }
 
 function atualizarPeca() {
     const id = v("upd-peca-id");
-    if (!id) return alert("Informe o ID");
+    if (!id) return showMessagePopup("Informe o ID", true);
     const body = {};
     if (v("upd-peca-nome").trim()) body.nome = v("upd-peca-nome").trim();
     if (v("upd-peca-descricao").trim()) body.descricao = v("upd-peca-descricao").trim();
@@ -138,13 +136,13 @@ function atualizarPeca() {
 function ajustarQuantidade() {
     const id = v("delta-peca-id");
     const delta = v("delta-valor");
-    if (!id || delta === "") return alert("ID e delta são obrigatórios");
+    if (!id || delta === "") return showMessagePopup("ID e delta são obrigatórios", true);
     req("PATCH", `/api/pecas/${id}/quantidade`, { delta: parseInt(delta) });
 }
 
 function deletarPeca() {
     const id = v("del-peca-id");
-    if (!id) return alert("Informe o ID");
+    if (!id) return showMessagePopup("Informe o ID", true);
     if (!confirm(`Deletar peça ${id}?`)) return;
     req("DELETE", `/api/pecas/${id}`);
 }
@@ -166,15 +164,19 @@ function criarReserva() {
     const peca_id = v("criar-res-peca-id");
     const data_retirada = v("criar-res-retirada");
     const data_devolucao = v("criar-res-devolucao");
-    if (!peca_id || !data_retirada || !data_devolucao) return alert("peca_id, data_retirada e data_devolucao são obrigatórios");
-    const body = { peca_id: parseInt(peca_id), data_retirada, data_devolucao, quantidade: parseInt(v("criar-res-qtd") || 1) };
+    if (!peca_id || !data_retirada || !data_devolucao) return showMessagePopup("peca_id, data_retirada e data_devolucao são obrigatórios", true);
+    const body = {
+        itens: [{ peca_id: parseInt(peca_id), quantidade: parseInt(v("criar-res-qtd") || 1) }],
+        data_retirada,
+        data_devolucao
+    };
     if (v("criar-res-obs").trim()) body.observacoes = v("criar-res-obs").trim();
     req("POST", "/api/reservas", body);
 }
 
 function atualizarReserva() {
     const id = v("upd-res-id");
-    if (!id) return alert("Informe o ID");
+    if (!id) return showMessagePopup("Informe o ID", true);
     const body = {};
     if (v("upd-res-retirada")) body.data_retirada = v("upd-res-retirada");
     if (v("upd-res-devolucao")) body.data_devolucao = v("upd-res-devolucao");
@@ -185,7 +187,7 @@ function atualizarReserva() {
 
 function deletarReserva() {
     const id = v("del-res-id");
-    if (!id) return alert("Informe o ID");
+    if (!id) return showMessagePopup("Informe o ID", true);
     if (!confirm(`Deletar reserva ${id}?`)) return;
     req("DELETE", `/api/reservas/${id}`);
 }

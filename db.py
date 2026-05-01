@@ -55,26 +55,36 @@ class Peca(Base):
     foto_path = Column(String)
     criado_em = Column(DateTime, nullable=False, default=datetime.utcnow)
 
-    reservas = relationship("Reserva", back_populates="peca", cascade="all, delete-orphan")
+    reserva_itens = relationship("ReservaItem", back_populates="peca", cascade="all, delete-orphan")
 
 
 class Reserva(Base):
     __tablename__ = "reservas"
 
     id             = Column(Integer, primary_key=True, autoincrement=True)
-    peca_id        = Column(Integer, ForeignKey("pecas.id", ondelete="CASCADE"), nullable=False)
     usuario_id     = Column(Integer, ForeignKey("usuarios.id", ondelete="SET NULL"))
     solicitante    = Column(String, nullable=False)
     data_retirada  = Column(String, nullable=False)
     data_devolucao = Column(String)
-    quantidade     = Column(Integer, nullable=False, default=1)
     devolvido      = Column(Boolean, nullable=False, default=False)
     retirado       = Column(Boolean, nullable=False, default=False)
     observacoes    = Column(Text)
     criado_em      = Column(DateTime, nullable=False, default=datetime.utcnow)
 
-    peca    = relationship("Peca",    back_populates="reservas")
     usuario = relationship("Usuario", back_populates="reservas")
+    itens   = relationship("ReservaItem", back_populates="reserva", cascade="all, delete-orphan")
+
+
+class ReservaItem(Base):
+    __tablename__ = "reserva_itens"
+
+    id         = Column(Integer, primary_key=True, autoincrement=True)
+    reserva_id = Column(Integer, ForeignKey("reservas.id", ondelete="CASCADE"), nullable=False)
+    peca_id    = Column(Integer, ForeignKey("pecas.id", ondelete="CASCADE"), nullable=False)
+    quantidade = Column(Integer, nullable=False, default=1)
+
+    reserva = relationship("Reserva", back_populates="itens")
+    peca    = relationship("Peca", back_populates="reserva_itens")
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -111,18 +121,23 @@ def _peca_dict(p: Peca) -> dict:
 def _reserva_dict(r: Reserva) -> dict:
     return {
         "id": r.id,
-        "peca_id": r.peca_id,
-        "peca_nome": r.peca.nome if r.peca else None,
         "usuario_id": r.usuario_id,
         "usuario_nome": r.usuario.nome if r.usuario else None,
         "solicitante": r.solicitante,
         "data_retirada": r.data_retirada,
         "data_devolucao": r.data_devolucao,
-        "quantidade": r.quantidade,
         "devolvido": r.devolvido,
         "retirado": r.retirado,
         "observacoes": r.observacoes,
         "criado_em": r.criado_em.isoformat() if r.criado_em else None,
+        "itens": [
+            {
+                "peca_id": item.peca_id,
+                "peca_nome": item.peca.nome if item.peca else None,
+                "quantidade": item.quantidade,
+            }
+            for item in r.itens
+        ],
     }
 
 
@@ -353,12 +368,13 @@ def disponibilidade_peca(peca_id: int, data: str) -> int:
     try:
         row = db.execute(
             text("""
-                SELECT COALESCE(SUM(quantidade), 0) AS reservado
-                FROM reservas
-                WHERE peca_id = :peca_id
-                  AND devolvido = 0
-                  AND data_retirada <= :data
-                  AND (data_devolucao IS NULL OR data_devolucao >= :data)
+                SELECT COALESCE(SUM(ri.quantidade), 0) AS reservado
+                FROM reserva_itens ri
+                JOIN reservas r ON ri.reserva_id = r.id
+                WHERE ri.peca_id = :peca_id
+                  AND r.devolvido = 0
+                  AND r.data_retirada <= :data
+                  AND (r.data_devolucao IS NULL OR r.data_devolucao >= :data)
             """),
             {"peca_id": peca_id, "data": data},
         ).fetchone()
@@ -366,6 +382,25 @@ def disponibilidade_peca(peca_id: int, data: str) -> int:
     finally:
         db.close()
 
+def proxima_disponibilidade(peca_id: int, data: str) -> str | None:
+    """Retorna a data mais próxima em que a peça volta a ter estoque disponível."""
+    db = get_db()
+    try:
+        row = db.execute(
+            text("""
+                SELECT MIN(r.data_devolucao)
+                FROM reservas r
+                JOIN reserva_itens ri ON ri.reserva_id = r.id
+                WHERE ri.peca_id = :peca_id
+                  AND r.devolvido = 0
+                  AND r.data_retirada <= :data
+                  AND r.data_devolucao >= :data
+            """),
+            {"peca_id": peca_id, "data": data},
+        ).fetchone()
+        return row[0] if row and row[0] else None
+    finally:
+        db.close()
 
 # ─── Reservas ─────────────────────────────────────────────────────────────────
 
@@ -374,7 +409,7 @@ def listar_reservas(peca_id: int = None, apenas_ativas: bool = False, usuario_id
     try:
         q = db.query(Reserva)
         if peca_id is not None:
-            q = q.filter(Reserva.peca_id == peca_id)
+            q = q.join(ReservaItem).filter(ReservaItem.peca_id == peca_id)
         if apenas_ativas:
             q = q.filter(Reserva.devolvido == False)
         if usuario_id is not None:
@@ -394,29 +429,47 @@ def buscar_reserva(reserva_id: int) -> dict | None:
 
 
 def criar_reserva(
-    peca_id: int,
+    itens: list[dict],  # lista de {peca_id, quantidade}
     solicitante: str,
     data_retirada: str,
     data_devolucao: str,
-    quantidade: int = 1,
     observacoes: str = None,
     usuario_id: int = None,
 ) -> dict:
     db = get_db()
     try:
+        # Verificar disponibilidade para todos os itens
+        for item in itens:
+            peca_id = item["peca_id"]
+            quantidade = item["quantidade"]
+            disponivel = disponibilidade_peca(peca_id, data_retirada)
+            if disponivel < quantidade:
+                raise ValueError(f"Estoque insuficiente para peça {peca_id}: {disponivel} disponível, {quantidade} solicitado")
+
         r = Reserva(
-            peca_id=peca_id,
             usuario_id=usuario_id,
             solicitante=solicitante,
             data_retirada=data_retirada,
             data_devolucao=data_devolucao,
-            quantidade=quantidade,
             observacoes=observacoes,
         )
         db.add(r)
+        db.flush()  # para obter o id da reserva
+
+        for item in itens:
+            ri = ReservaItem(
+                reserva_id=r.id,
+                peca_id=item["peca_id"],
+                quantidade=item["quantidade"],
+            )
+            db.add(ri)
+
         db.commit()
         db.refresh(r)
         return _reserva_dict(r)
+    except Exception as e:
+        db.rollback()
+        raise e
     finally:
         db.close()
 

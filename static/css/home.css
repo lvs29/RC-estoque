@@ -2,14 +2,55 @@ main {
     display: block;
 }
 
-main h1 {
+h1 {
     font-size: 2rem;
-    padding: 1.5rem;
     color: var(--accent-blue);
     letter-spacing: 0.08em;
 }
 
-.cart-btn {
+.tipos {
+    display: flex;
+    padding: 1rem 2rem 1rem 2rem;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+}
+.tipos .tipo-div {
+    display: flex;
+    gap: 1rem;
+}
+.tipo-div button {
+    padding: 0.7rem;
+    font-size: 0.9rem;
+    background-color: var(--popup-bg);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 2rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+button.active,
+.tipo-div button:hover {
+    background-color: var(--accent);
+    color: var(--popup-bg);
+}
+.search-bar input {
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 2rem;
+    background-color: var(--popup-bg);
+    color: var(--text-1-color);
+    font-size: 0.9rem;
+    width: 400px;
+    transition: border-color 0.3s;
+}
+.search-bar input:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+}
+
+#cart-btn {
     background: var(--accent-blue);
     color: var(--text-1-color);
     border: none;
@@ -77,6 +118,16 @@ main h1 {
 .quantity-box p {
     color: var(--text-dark);
 }
+p.tipo {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    background-color: var(--popup-bg);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 0.5rem;
+    width: fit-content;
+}
 
 .nome {
     font-size: 1.1rem;
@@ -140,6 +191,7 @@ main h1 {
 }
 
 #popup input,
+#popup select,
 #popup textarea {
     padding: 10px 12px;
     background: var(--bg-color);
@@ -153,6 +205,7 @@ main h1 {
 }
 
 #popup input:focus,
+#popup select:focus,
 #popup textarea:focus {
     border-color: var(--accent-yellow);
 }

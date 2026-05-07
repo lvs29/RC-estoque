@@ -116,7 +116,7 @@
         <i class="fa-solid fa-rotate-left"></i> Marcar devolvida
       </button>`);
     }
-    if (!r.devolvido || usuarioAtual.role === "admin") {
+    if (usuarioAtual.role === "admin" || (!r.devolvido && !r.retirado)) {
       acoes.push(`<button class="reserva-btn-deletar" onclick="deletarReserva(${r.id})">
         <i class="fa-solid fa-trash"></i>
       </button>`);
@@ -129,7 +129,7 @@
           <p class="reserva-datas">
             <i class="fa-solid fa-calendar-check"></i> ${formatarData(r.data_retirada)}
             &nbsp;→&nbsp;
-            <i class="fa-solid fa-calendar-xmark"></i> ${formatarData(r.data_devolucao)}
+            <i class="fa-solid fa-calendar-xmark"></i> ${formatarData(r.data_prevista_devolucao)}
           </p>
         </div>
         ${status}
@@ -161,9 +161,19 @@
 
   async function deletarReserva(id) {
     if (!confirm("Deletar esta reserva?")) return;
-    const { status } = await req("DELETE", `/api/reservas/${id}`);
-    if (status === 200) { showMessagePopup("Reserva deletada!"); carregarReservas(); }
-    else showMessagePopup("Erro ao deletar reserva", true);
+    try {
+      const { status, data } = await req("DELETE", `/api/reservas/${id}`);
+      if (status === 200) {
+        showMessagePopup("Reserva deletada!");
+        carregarReservas();
+      }
+    } catch (err) {
+      if (err.status === 403) {
+        showMessagePopup(err.message, true);
+      } else {
+        showMessagePopup("Erro ao deletar reserva", true);
+      }
+    }
   }
 </script>
 </body>

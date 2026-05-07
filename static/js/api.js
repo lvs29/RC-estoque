@@ -22,7 +22,7 @@ async function req(method, url, body = null, isForm = false) {
 
     const res = await fetch(url, opts);
 
-    if (!res.ok && res.status !== 401 && res.status !== 409) {
+    if (!res.ok && res.status !== 401 && res.status !== 409 && res.status !== 400) {
         const json = await res.json().catch(() => ({}));
         throw Object.assign(new Error(json.mensagem || "Erro desconhecido"), { status: res.status });
     }
@@ -69,6 +69,10 @@ async function fazerLogout() {
     window.location.href = "/login";
 }
 
+async function atualizarPerfil(body) {
+    return req("PUT", "/api/auth/me", body);
+}
+
 // ─── Usuários ──────────────────────────────────────────────────────────────
 
 async function criarUsuario() {
@@ -97,9 +101,20 @@ function deletarUsuario() {
     req("DELETE", `/api/usuarios/${id}`);
 }
 
+async function deletarUsuarioPorId(id) {
+    return req("DELETE", `/api/usuarios/${id}`);
+}
+
+async function atualizarUsuarioPorId(id, body) {
+    return req("PUT", `/api/usuarios/${id}`, body);
+}
+
 // ─── Peças ─────────────────────────────────────────────────────────────────
 
-function listarPecas() {
+function listarPecas(query = "") {
+    if (query) {
+        return req("GET", `/api/pecas?busca=${query}`);
+    }
     return req("GET", "/api/pecas");
 }
 
@@ -112,12 +127,15 @@ function checarDisponibilidade() {
 
 async function criarPeca() {
     const nome = v("criar-peca-nome").trim();
+    const tipo = document.getElementById("criar-peca-tipo").value;
     if (!nome) return showMessagePopup("Nome é obrigatório", true);
+    if (!tipo) return showMessagePopup("Tipo é obrigatório", true);
     const foto = document.getElementById("criar-peca-foto").files[0];
     const form = new FormData();
     form.append("nome", nome);
     form.append("descricao", v("criar-peca-descricao"));
     form.append("quantidade", v("criar-peca-quantidade") || 0);
+    form.append("tipo", tipo);
     if (foto) form.append("foto", foto);
     const { status, data } = await req("POST", "/api/pecas", form, true);
     if (status === 409) return showMessagePopup(data.erro || "Nome já existe", true);
@@ -147,12 +165,22 @@ function deletarPeca() {
     req("DELETE", `/api/pecas/${id}`);
 }
 
+async function deletarPecaPorId(id) {
+    return req("DELETE", `/api/pecas/${id}`);
+}
+
+async function atualizarPecaPorId(id, body) {
+    return req("PUT", `/api/pecas/${id}`, body);
+}
+
 // ─── Reservas ──────────────────────────────────────────────────────────────
 
 function listarReservas(peca_id = null, apenas_ativas = false) {
     const params = new URLSearchParams();
+
     if (peca_id) params.append("peca_id", peca_id);
     if (apenas_ativas) params.append("ativas", "true");
+
     return req("GET", `/api/reservas?${params}`);
 }
 
@@ -163,31 +191,58 @@ function listarUsuarios() {
 function criarReserva() {
     const peca_id = v("criar-res-peca-id");
     const data_retirada = v("criar-res-retirada");
-    const data_devolucao = v("criar-res-devolucao");
-    if (!peca_id || !data_retirada || !data_devolucao) return showMessagePopup("peca_id, data_retirada e data_devolucao são obrigatórios", true);
+    const data_prevista_devolucao = v("criar-res-devolucao");
+
+    if (!peca_id || !data_retirada || !data_prevista_devolucao) {
+        return showMessagePopup("peca_id, data_retirada e data_prevista_devolucao são obrigatórios", true );
+    }
+
     const body = {
-        itens: [{ peca_id: parseInt(peca_id), quantidade: parseInt(v("criar-res-qtd") || 1) }],
+        itens: [{
+            peca_id: parseInt(peca_id),
+            quantidade: parseInt(v("criar-res-qtd") || 1)
+        }],
         data_retirada,
-        data_devolucao
+        data_prevista_devolucao
     };
-    if (v("criar-res-obs").trim()) body.observacoes = v("criar-res-obs").trim();
+
+    if (v("criar-res-obs").trim()) {body.observacoes = v("criar-res-obs").trim();}
+
     req("POST", "/api/reservas", body);
+}
+
+async function criarReservaComBody(body) {
+    return req("POST", "/api/reservas", body);
 }
 
 function atualizarReserva() {
     const id = v("upd-res-id");
-    if (!id) return showMessagePopup("Informe o ID", true);
+    if (!id) {return showMessagePopup("Informe o ID", true);}
+
     const body = {};
-    if (v("upd-res-retirada")) body.data_retirada = v("upd-res-retirada");
-    if (v("upd-res-devolucao")) body.data_devolucao = v("upd-res-devolucao");
-    if (v("upd-res-qtd")) body.quantidade = parseInt(v("upd-res-qtd"));
-    if (v("upd-res-obs").trim()) body.observacoes = v("upd-res-obs").trim();
+
+    if (v("upd-res-retirada")) {body.data_retirada = v("upd-res-retirada");}
+    if (v("upd-res-devolucao")) {body.data_prevista_devolucao = v("upd-res-devolucao");}
+    if (v("upd-res-obs").trim()) {body.observacoes = v("upd-res-obs").trim();}
+
     req("PUT", `/api/reservas/${id}`, body);
 }
 
 function deletarReserva() {
     const id = v("del-res-id");
-    if (!id) return showMessagePopup("Informe o ID", true);
-    if (!confirm(`Deletar reserva ${id}?`)) return;
-    req("DELETE", `/api/reservas/${id}`);
+    if (!id) {
+        return showMessagePopup("Informe o ID", true);
+    }
+    if (!confirm(`Cancelar reserva ${id}?`)) {
+        return;
+    }
+    req("DELETE", `/api/reservas/${id}`)
+        .then(({ status }) => {
+            if (status === 200) {showMessagePopup("Reserva cancelada com sucesso!");}
+        })
+        .catch((err) => {
+            if (err.status === 403) {
+                showMessagePopup(err.message, true);
+            } else {showMessagePopup("Erro ao cancelar reserva", true);}
+        });
 }

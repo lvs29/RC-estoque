@@ -58,13 +58,20 @@
       <div class="form-group">
         <input id="criar-peca-nome" type="text" placeholder="Nome da peça *">
         <textarea id="criar-peca-descricao" placeholder="Descrição" rows="3"></textarea>
+        <select id="criar-peca-tipo">
+            <option value="">Tipo</option>
+            <option value="Eletrônicos">Eletrônicos</option>
+            <option value="Legos">Legos</option>
+            <option value="Computadores">Computadores</option>
+            <option value="Diversos">Diversos</option>
+        </select>
         <input id="criar-peca-quantidade" type="number" placeholder="Quantidade" min="0">
         <input id="criar-peca-foto" type="file" accept="image/*">
         <button id="criar-peca-btn">Salvar peça</button>
       </div>
       <table>
         <thead>
-          <tr><th>ID</th><th>Nome</th><th>Qtd</th><th>Descrição</th><th>Ações</th></tr>
+          <tr><th>ID</th><th>Nome</th><th>Total</th><th>Reservado</th><th>Disponível</th><th>Descrição</th><th>Ações</th></tr>
         </thead>
         <tbody id="pecas-tabela"></tbody>
       </table>

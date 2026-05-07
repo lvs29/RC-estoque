@@ -1,6 +1,6 @@
 :root {
-    --bg-color: #0d0d0f;
-    --header-color: rgba(0, 0, 0, 0.5);
+    --bg-color: #0a0a27;
+    --header-color: rgba(0, 0, 0, 0.4);
     --fg-grey: #191c28;
     --accent-blue: #00c8d4;
     --accent-yellow: #f5c400;
@@ -27,7 +27,7 @@ body {
 }
 
 header {
-    background-color: var(--header-color);
+    background-color: transparent;
     height: 6rem;
     width: auto;
     display: flex;
@@ -35,24 +35,28 @@ header {
     align-items: center;
     padding-left: 5rem;
     padding-right: 5rem;
+    transition: background-color 0.3s;
+}
+header:hover {
+    background-color: var(--header-color);
 }
 .logo {
     font-size: 2rem;
 }
-nav {
+header nav {
     display: flex;
     gap: 2rem;
     font-size: 1.25rem;
 }
-nav a {
+header nav a {
     color: var(--accent-blue);
     text-decoration: none;
 }
-nav a i {
+header nav a i {
     color: var(--accent-blue);
     margin-right: 5px;
 }
-nav a::before {
+header nav a::before {
     content: "";
     display: block;
     width: 0;
@@ -61,9 +65,9 @@ nav a::before {
     transform: translateY(26px);
     transition: width .3s;
 }
-nav a:hover::before {
+header nav a:hover::before {
     width: 100%;
-}
+}   
 
 .logo a {
     height: fit-content;

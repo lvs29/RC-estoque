@@ -1,4 +1,13 @@
+let pecas = [];
+let searchInput;
+let buttons;
+
 async function renderPecas(pecas) {
+    let eletronicosCor = "#db3a2e";
+    let legosCor = "#ffce3b";
+    let computadoresCor = "#4489d3";
+    let diversosCor = "#9eff86";
+
     const grid = document.querySelector(".card-grid");
     grid.innerHTML = "";
 
@@ -29,6 +38,7 @@ async function renderPecas(pecas) {
             </div>
             <p class="nome">${peca.nome}</p>
             <p class="desc">${peca.descricao}</p>
+            <p class="tipo" style="--accent: ${peca.tipo === 'Eletrônicos' ? eletronicosCor : peca.tipo === 'Legos' ? legosCor : peca.tipo === 'Computadores' ? computadoresCor : diversosCor};">${peca.tipo}</p>
             <button class="add" ${isOut ? "disabled" : ""} data-peca-id="${peca.id}" data-peca-nome="${peca.nome}">${isOut ? "Sem estoque" : "Adicionar +"}</button>
         `;
         grid.appendChild(card);
@@ -45,7 +55,7 @@ async function renderPecas(pecas) {
 let carrinhoReserva = {
     itens: [],
     data_retirada: null,
-    data_devolucao: null,
+    data_prevista_devolucao: null,
     observacoes: ""
 };
 
@@ -161,7 +171,7 @@ function openCartModal() {
         <input type="date" id="modal-retirada" value="${carrinhoReserva.data_retirada || ''}">
 
         <label>Data de Devolução *</label>
-        <input type="date" id="modal-devolucao" value="${carrinhoReserva.data_devolucao || ''}">
+        <input type="date" id="modal-devolucao" value="${carrinhoReserva.data_prevista_devolucao || ''}">
 
         <label>Observações</label>
         <textarea id="modal-obs" placeholder="Adicione observações...">${carrinhoReserva.observacoes}</textarea>
@@ -194,7 +204,7 @@ function openCartModal() {
         }
 
         carrinhoReserva.data_retirada = data_retirada;
-        carrinhoReserva.data_devolucao = data_devolucao;
+        carrinhoReserva.data_prevista_devolucao = data_devolucao;
         carrinhoReserva.observacoes = observacoes;
 
         await confirmarReserva();
@@ -206,16 +216,16 @@ async function confirmarReserva() {
     const body = {
         itens: carrinhoReserva.itens,
         data_retirada: carrinhoReserva.data_retirada,
-        data_devolucao: carrinhoReserva.data_devolucao,
+        data_prevista_devolucao: carrinhoReserva.data_prevista_devolucao,
     };
     if (carrinhoReserva.observacoes.trim()) {
         body.observacoes = carrinhoReserva.observacoes;
     }
 
-    const { status, data } = await req("POST", "/api/reservas", body);
+    const { status, data } = await criarReservaComBody(body);
     if (status === 201) {
         showMessagePopup("Reserva confirmada com sucesso!");
-        carrinhoReserva = { itens: [], data_retirada: null, data_devolucao: null, observacoes: "" };
+        carrinhoReserva = { itens: [], data_retirada: null, data_prevista_devolucao: null, observacoes: "" };
         updateCartUI();
     } else {
         let msg = data.erro || data.description || "Erro ao criar reserva";
@@ -224,7 +234,7 @@ async function confirmarReserva() {
                 .toLocaleDateString("pt-BR");
             msg += `\n\nEstoque disponível a partir de ${fmt}.`;
         }
-        showMessagePopup(msg, true);  // usa msg, não data.description diretamente
+        showMessagePopup(msg, true);
     }
 }
 
@@ -242,6 +252,13 @@ function addPecaPopup() {
         <textarea id="criar-peca-descricao" placeholder="Descrição" rows="3"></textarea>
         <input id="criar-peca-quantidade" type="number" placeholder="Quantidade" min="0">
         <input id="criar-peca-foto" type="file" accept="image/*">
+        <select id="criar-peca-tipo">
+            <option value="">Tipo</option>
+            <option value="Eletrônicos">Eletrônicos</option>
+            <option value="Legos">Legos</option>
+            <option value="Computadores">Computadores</option>
+            <option value="Diversos">Diversos</option>
+        </select>
 
         <div class="popup-actions">
             <button id="popup-cancelar">Cancelar</button>
@@ -309,13 +326,17 @@ let TOKEN = localStorage.getItem("token") || null;
 function renderUsuarios(users) {
     const tbody = document.getElementById("usuarios-tabela");
     tbody.innerHTML = users.map(u => `
-      <tr>
+      <tr data-usuario-id="${u.id}">
         <td>${u.id}</td>
         <td>${u.nome}</td>
         <td>${u.username}</td>
-        <td>${u.role}</td>
+        <td><select value="${u.role}">
+          <option value="user" ${u.role === "user" ? "selected" : ""}>Usuário</option>
+          <option value="admin" ${u.role === "admin" ? "selected" : ""}>Administrador</option>
+        </select></td>
         <td class="action-cell">
           <button type="button" onclick="handleDeleteUsuario(${u.id})">Excluir</button>
+          <button type="button" onclick="atualizarUsuario(${u.id})" class="save-btn">Salvar</button>
         </td>
       </tr>
     `).join("");
@@ -324,13 +345,16 @@ function renderUsuarios(users) {
 function renderPecasAdmin(pecas) {
     const tbody = document.getElementById("pecas-tabela");
     tbody.innerHTML = pecas.map(p => `
-      <tr>
+      <tr data-peca-id="${p.id}">
         <td>${p.id}</td>
-        <td>${p.nome}</td>
+        <td><input type="text" value="${p.nome}"/></td>
+        <td><input type="number" value="${p.quantidade_total || p.quantidade}" min="0"/></td>
+        <td>${p.quantidade_reservada || 0}</td>
         <td>${p.quantidade}</td>
-        <td>${p.descricao || "—"}</td>
+        <td><input type="text" value="${p.descricao || "—"}"/></td>
         <td class="action-cell">
           <button type="button" onclick="handleDeletePeca(${p.id})">Excluir</button>
+          <button type="button" onclick="atualizarPeca(${p.id})" class="save-btn">Salvar</button>
         </td>
       </tr>
     `).join("");
@@ -346,7 +370,7 @@ function renderReservas(reservas) {
         <td>${itensStr}</td>
         <td>${r.solicitante}</td>
         <td>${r.data_retirada}</td>
-        <td>${r.data_devolucao || "—"}</td>
+        <td>${r.data_prevista_devolucao || "—"}</td>
         <td>${r.itens.reduce((sum, item) => sum + item.quantidade, 0)}</td>
         <td>${r.devolvido ? "Devolvido" : r.retirado ? "Retirado" : "Pendente"}</td>
       </tr>
@@ -370,13 +394,36 @@ async function loadReservas() {
 
 async function handleDeleteUsuario(id) {
     if (!confirm(`Excluir usuário ${id}?`)) return;
-    await req("DELETE", `/api/usuarios/${id}`);
+    await deletarUsuarioPorId(id);
+    await loadUsuarios();
+}
+
+async function atualizarUsuario(id) {
+    const row = document.querySelector(`#usuarios-tabela tr[data-usuario-id="${id}"]`);
+    if (!row) return showMessagePopup("Linha não encontrada", true);
+    const role = row.querySelector("td:nth-child(4) select").value;
+    await atualizarUsuarioPorId(id, { role });
     await loadUsuarios();
 }
 
 async function handleDeletePeca(id) {
     if (!confirm(`Excluir peça ${id}?`)) return;
-    await req("DELETE", `/api/pecas/${id}`);
+    await deletarPecaPorId(id);
+    await loadPecas();
+}
+
+async function atualizarPeca(id) {
+    const row = document.querySelector(`#pecas-tabela tr[data-peca-id="${id}"]`);
+    if (!row) return showMessagePopup("Linha não encontrada", true);
+    const nome = row.querySelector("td:nth-child(2) input").value.trim();
+    const quantidade_total = row.querySelector("td:nth-child(3) input").value;
+    const descricao = row.querySelector("td:nth-child(6) input").value.trim();
+    if (!nome) return showMessagePopup("Nome é obrigatório", true);
+    await atualizarPecaPorId(id, {
+        nome,
+        quantidade_total: parseInt(quantidade_total) || 0,
+        descricao
+    });
     await loadPecas();
 }
 
@@ -444,7 +491,7 @@ async function initProfilePage() {
         }
 
         try {
-            const res = await req("PUT", "/api/auth/me", updateData);
+            const res = await atualizarPerfil(updateData);
             if (res.status === 200) {
                 showMessagePopup("Perfil atualizado com sucesso!");
                 // Clear password fields
@@ -487,12 +534,67 @@ function showMessagePopup(msg, isError = false) {
     });
 }
 
+function initSearch() {
+    searchInput = document.querySelector(".search-bar input");
+    if (!searchInput) return;
+
+    searchInput.addEventListener("input", () => {
+        const query = searchInput.value.trim().toLowerCase();
+        const filtered = pecas.filter(peca =>
+            peca.nome.toLowerCase().includes(query) ||
+            peca.descricao.toLowerCase().includes(query)
+        );
+        renderPecas(filtered);
+        updateClearButton();
+    });
+}
+
+function initSearchByType() {
+    const tipoDiv = document.querySelector(".tipo-div");
+    if (!tipoDiv) return;
+    
+    buttons = document.querySelectorAll(".tipo-div button");
+    const clearBtn = document.createElement("button");
+    clearBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+    clearBtn.className = "clear-btn";
+    clearBtn.style.display = "none";
+    tipoDiv.insertBefore(clearBtn, tipoDiv.firstChild);
+
+    buttons.forEach(button => {
+        button.addEventListener("click", () => {
+            const tipo = button.textContent.trim();
+            buttons.forEach(btn => btn.classList.remove("active"));
+            button.classList.add("active");
+            renderPecas(pecas.filter(p => p.tipo === tipo));
+            updateClearButton();
+        });
+    });
+
+    clearBtn.addEventListener("click", () => {
+        if (searchInput) searchInput.value = "";
+        buttons.forEach(btn => btn.classList.remove("active"));
+        renderPecas(pecas);
+        updateClearButton();
+    });
+}
+
+function updateClearButton() {
+    const clearBtn = document.querySelector(".clear-btn");
+    if (!clearBtn) return;
+    const hasActiveType = Array.from(buttons).some(btn => btn.classList.contains("active"));
+    const hasQuery = searchInput && searchInput.value.trim();
+    clearBtn.style.display = (hasActiveType || hasQuery) ? "inline-block" : "none";
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     await restaurarSessao();
     renderNav();
     if (document.getElementsByClassName("card-grid").length > 0) {
         const res = await listarPecas();
-        if (res.status === 200) renderPecas(res.data);
+        if (res.status === 200) {
+            pecas = res.data;
+            renderPecas(pecas);
+        }
     }
     if (document.getElementById("usuario-display")) {
         document.getElementById("usuario-display").textContent = usuarioAtual.nome;
@@ -504,7 +606,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (document.getElementById("profile-form")) {
         await initProfilePage();
     }
-    
+    await initSearch();
+    initSearchByType();
     // Cart button listener
     const cartBtn = document.getElementById("cart-btn");
     if (cartBtn) {

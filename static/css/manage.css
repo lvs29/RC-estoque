@@ -78,6 +78,22 @@ h1 {
   color: var(--text-1-color);
 }
 
+.admin-card table input,
+.admin-card table textarea,
+.admin-card table select {
+  width: fit-content;
+  border: 1px solid var(--border-color);
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg-color);
+  color: var(--text-1-color);
+  font: inherit;
+}
+
+.admin-card table input[type="number"] {
+  max-width: 5rem;
+}
+
 .admin-card button {
   border: none;
   border-radius: 0.75rem;
@@ -111,4 +127,13 @@ h1 {
 .small-note {
   color: var(--text-2-color);
   margin-top: 0.5rem;
+}
+.action-cell .save-btn {
+  background: transparent;
+  border: 1px solid var(--accent-green);
+  color: var(--accent-green);
+}
+.action-cell .save-btn:hover {
+  background: var(--accent-green);
+  color: var(--text-dark);
 }

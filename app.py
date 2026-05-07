@@ -41,7 +41,7 @@ def requer_login(f):
     def wrapper(*args, **kwargs):
         u = usuario_atual()
         if not u:
-            return jsonify({"erro": "Não autenticado"}), 401
+            return redirect("/login")
         request.usuario = u
         return f(*args, **kwargs)
     return wrapper
@@ -52,7 +52,7 @@ def requer_admin(f):
     def wrapper(*args, **kwargs):
         u = usuario_atual()
         if not u:
-            return jsonify({"erro": "Não autenticado"}), 401
+            return redirect("/login")
         if u["role"] != "admin":
             return jsonify({"erro": "Acesso restrito a administradores"}), 403
         request.usuario = u
@@ -100,14 +100,14 @@ def post_login():
     if not usuario:
         abort(401, "Credenciais inválidas")
 
-    resp = jsonify({"usuario": usuario})  # token sai do body
+    resp = jsonify({"usuario": usuario})
     resp.set_cookie(
         "token",
         token,
-        httponly=True,       # JS não consegue ler
-        secure=True,         # só HTTPS — tire em dev local se precisar
-        samesite="Strict",   # não vaza em requisições cross-site
-        max_age=60 * 60 * 24 * 7,  # 7 dias, ajuste conforme necessário
+        httponly=True,
+        secure=True,
+        samesite="Strict",
+        max_age=60 * 60 * 24 * 7,  # 7 dias
         path="/",
     )
     return resp
@@ -183,18 +183,33 @@ def post_usuario():
     try:
         u = criar_usuario(nome, username, senha, role)
     except Exception:
-        abort(409, "Username já existe")
+        abort(409, Exception.__cause__)
     return jsonify(u), 201
 
 
 @app.route("/api/usuarios/<int:uid>", methods=["PUT"])
 @requer_admin
 def put_usuario(uid):
-    if not buscar_usuario(uid):
-        abort(404, "Usuário não encontrado")
     dados = request.get_json(force=True) or {}
-    campos = {k: v for k, v in dados.items() if k in {"nome", "username", "senha", "role"}}
-    return jsonify(atualizar_usuario(uid, **campos))
+
+    if not isinstance(dados, dict):
+        abort(400, "JSON inválido")
+
+    campos = {
+        k: v
+        for k, v in dados.items()
+        if k in {"nome", "username", "senha", "role"}
+    }
+
+    try:
+        usuario = atualizar_usuario(uid, **campos)
+        return jsonify(usuario)
+
+    except ValueError as e:
+        abort(400, str(e))
+
+    except Exception:
+        abort(500, "Erro interno")
 
 
 @app.route("/api/usuarios/<int:uid>", methods=["DELETE"])
@@ -213,7 +228,8 @@ def delete_usuario(uid):
 @app.route("/api/pecas", methods=["GET"])
 @requer_login
 def get_pecas():
-    return jsonify(listar_pecas())
+    pecas = listar_pecas()
+    return jsonify(pecas)
 
 
 @app.route("/api/pecas/<int:peca_id>", methods=["GET"])
@@ -252,18 +268,27 @@ def post_peca():
             filename = f"{uuid.uuid4().hex}.{ext}"
             destino = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             arquivo.save(destino)
-            foto_path = f"/static/fotos/{filename}"  # URL acessível pelo browser
+            foto_path = f"/static/fotos/{filename}"
     else:
         dados = request.get_json(force=True) or {}
 
     nome = dados.get("nome", "").strip()
     if not nome:
         abort(400, "Campo 'nome' é obrigatório")
+    tipo = dados.get("tipo", "").strip()
+    if not tipo:
+        abort(400, "Campo 'tipo' é obrigatório")
+    if not tipo in ("Eletrônicos", "Legos", "Computadores", "Diversos"):
+        abort(400, "Campo 'tipo' deve ser um dos seguintes: Eletrônicos, Legos, Computadores, Diversos")
+    quantidade = dados.get("quantidade", dados.get("quantidade_total", 0))
+    if int(quantidade) < 0:
+        abort(400, "quantidade_total não pode ser negativa")
     peca = criar_peca(
         nome=nome,
         descricao=dados.get("descricao"),
-        quantidade=int(dados.get("quantidade", 0)),
+        quantidade=int(quantidade),
         foto_path=foto_path,
+        tipo=tipo
     )
     if peca is None:
         abort(409, "Já existe uma peça com esse nome")
@@ -285,11 +310,16 @@ def put_peca(peca_id):
             foto_path = destino
     else:
         dados = request.get_json(force=True) or {}
-    campos = {k: v for k, v in dados.items() if k in {"nome", "descricao", "quantidade"}}
+    campos = {k: v for k, v in dados.items() if k in {"nome", "descricao", "quantidade", "quantidade_total"}}
     if foto_path:
         campos["foto_path"] = foto_path
     if "quantidade" in campos:
-        campos["quantidade"] = int(campos["quantidade"])
+        campos["quantidade_total"] = int(campos.pop("quantidade"))
+    if "quantidade_total" in campos:
+        qtd = int(campos["quantidade_total"])
+        if qtd < 0:
+            abort(400, "quantidade_total não pode ser negativa")
+        campos["quantidade_total"] = qtd
     return jsonify(atualizar_peca(peca_id, **campos))
 
 
@@ -311,7 +341,11 @@ def patch_quantidade(peca_id):
     delta = dados.get("delta")
     if delta is None:
         abort(400, "Campo 'delta' é obrigatório")
-    return jsonify(ajustar_quantidade(peca_id, int(delta)))
+    peca = buscar_peca(peca_id)
+    if not peca:
+        abort(404, "Peça não encontrada")
+    novo_total = max(0, (peca.get("quantidade_total", peca.get("quantidade", 0)) + int(delta)))
+    return jsonify(atualizar_peca(peca_id, quantidade_total=novo_total))
 
 
 # ─── Reservas ─────────────────────────────────────────────────────────────────
@@ -328,7 +362,6 @@ def get_reservas():
         r["atrasado"] = reserva_atrasada(r)
     return jsonify(reservas)
 
-
 @app.route("/api/reservas/<int:reserva_id>", methods=["GET"])
 @requer_login
 def get_reserva(reserva_id):
@@ -340,72 +373,65 @@ def get_reserva(reserva_id):
     reserva["atrasado"] = reserva_atrasada(reserva)
     return jsonify(reserva)
 
-
 @app.route("/api/reservas", methods=["POST"])
 @requer_login
 def post_reserva():
     """
-    Valida disponibilidade antes de criar.
-    Solicitante é sempre o usuário logado.
-    Body: { itens: [{peca_id, quantidade}], data_retirada, data_devolucao, observacoes? }
+    Body: { itens: [{peca_id, quantidade}], data_retirada, data_prevista_devolucao, observacoes? }
     """
     dados = request.get_json(force=True) or {}
     itens = dados.get("itens", [])
     data_retirada = dados.get("data_retirada", "").strip()
-    data_devolucao = dados.get("data_devolucao", "").strip()
+    data_prevista_devolucao = (dados.get("data_prevista_devolucao") or dados.get("data_devolucao") or "").strip()
 
     if not itens:
         abort(400, "itens é obrigatório e deve ser uma lista não vazia")
     if not data_retirada:
         abort(400, "data_retirada é obrigatório")
-    if not data_devolucao:
-        abort(400, "data_devolucao é obrigatório")
+    if not data_prevista_devolucao:
+        abort(400, "data_prevista_devolucao é obrigatório")
 
-    # Validar itens
     for item in itens:
         peca_id = item.get("peca_id")
         quantidade = item.get("quantidade", 1)
+
         if not peca_id or not isinstance(quantidade, int) or quantidade < 1:
             abort(400, "Cada item deve ter peca_id e quantidade >= 1")
+
         if not buscar_peca(peca_id):
             abort(404, f"Peça {peca_id} não encontrada")
 
-    # antecedência mínima de 24h
     hoje = date.today()
     retirada = date.fromisoformat(data_retirada)
-    devolucao = date.fromisoformat(data_devolucao)
+    devolucao = date.fromisoformat(data_prevista_devolucao)
+
     if retirada < hoje + timedelta(days=1):
         abort(400, f"A reserva deve ser feita com no mínimo 24h de antecedência. Primeira data disponível: {hoje + timedelta(days=1)}")
+
     if devolucao < retirada:
-        abort(400, "data_devolucao não pode ser anterior a data_retirada")
+        abort(400, "data_prevista_devolucao não pode ser anterior a data_retirada")
 
     solicitante = request.usuario["nome"]
-
-    # Verificar disponibilidade para cada item (já feito em criar_reserva, mas ok)
 
     try:
         reserva = criar_reserva(
             itens=itens,
             solicitante=solicitante,
             data_retirada=data_retirada,
-            data_devolucao=data_devolucao,
+            data_prevista_devolucao=data_prevista_devolucao,
             observacoes=dados.get("observacoes"),
             usuario_id=request.usuario["id"],
         )
+
     except ValueError as e:
-        # extrai o peca_id do primeiro item com problema
-        peca_id = next(
-            (i["peca_id"] for i in itens if disponibilidade_peca(i["peca_id"], data_retirada) < i["quantidade"]),
-            None
-        )
+        peca_id = next((i["peca_id"] for i in itens if disponibilidade_peca(i["peca_id"], data_retirada) < i["quantidade"]), None)
         proxima = proxima_disponibilidade(peca_id, data_retirada) if peca_id else None
+
         return jsonify({
             "erro": str(e),
             "proxima_disponibilidade": proxima
         }), 409
-
     return jsonify(reserva), 201
-
 
 @app.route("/api/reservas/<int:reserva_id>", methods=["PUT"])
 @requer_login
@@ -413,20 +439,24 @@ def put_reserva(reserva_id):
     reserva = buscar_reserva(reserva_id)
     if not reserva:
         abort(404, "Reserva não encontrada")
+
     if request.usuario["role"] != "admin" and reserva["usuario_id"] != request.usuario["id"]:
         abort(403, "Acesso negado")
-    dados = request.get_json(force=True) or {}
-    campos = {k: v for k, v in dados.items()
-              if k in {"data_retirada", "data_devolucao", "devolvido", "quantidade", "observacoes"}}
-    if request.usuario["role"] != "admin":
-        campos.pop("devolvido", None)
-    # valida devolucao >= retirada se ambas estiverem sendo alteradas ou já existirem
-    nova_retirada = date.fromisoformat(campos["data_retirada"]) if "data_retirada" in campos else date.fromisoformat(reserva["data_retirada"])
-    nova_devolucao = date.fromisoformat(campos["data_devolucao"]) if "data_devolucao" in campos else date.fromisoformat(reserva["data_devolucao"])
-    if nova_devolucao < nova_retirada:
-        abort(400, "data_devolucao não pode ser anterior a data_retirada")
-    return jsonify(atualizar_reserva(reserva_id, **campos))
 
+    dados = request.get_json(force=True) or {}
+    campos = {
+        k: v for k, v in dados.items()
+        if k in {"data_retirada", "data_prevista_devolucao", "data_devolucao", "observacoes"}
+    }
+    if "data_devolucao" in campos:
+        campos["data_prevista_devolucao"] = campos.pop("data_devolucao")
+
+    nova_retirada = date.fromisoformat(campos["data_retirada"]) if "data_retirada" in campos else date.fromisoformat(reserva["data_retirada"])
+    nova_devolucao = date.fromisoformat(campos["data_prevista_devolucao"]) if "data_prevista_devolucao" in campos else date.fromisoformat(reserva["data_prevista_devolucao"])
+    if nova_devolucao < nova_retirada:
+        abort(400, "data_prevista_devolucao não pode ser anterior a data_retirada")
+
+    return jsonify(atualizar_reserva(reserva_id, **campos))
 
 @app.route("/api/reservas/<int:reserva_id>/devolver", methods=["PATCH"])
 @requer_admin
@@ -448,11 +478,14 @@ def delete_reserva(reserva_id):
     reserva = buscar_reserva(reserva_id)
     if not reserva:
         abort(404, "Reserva não encontrada")
-    if request.usuario["role"] != "admin" and reserva["usuario_id"] != request.usuario["id"]:
-        abort(403, "Acesso negado")
-    deletar_reserva(reserva_id)
-    return jsonify({"ok": True})
 
+    usuario_id = request.usuario["id"]
+    role = request.usuario["role"]
+    sucesso, mensagem = deletar_reserva(reserva_id, usuario_id, role)
+
+    if not sucesso:
+        abort(403, mensagem)
+    return jsonify({"ok": True})
 
 # ─── Erros ────────────────────────────────────────────────────────────────────
 

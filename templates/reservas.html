@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Reservas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/reservas.css">
+  <link rel="shortcut icon" href="/static/img/favicon.png" type="image/x-icon">
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <a href="/">
+      <img src="/static/img/logo.webp" alt="logo">
+    </a>
+  </div>
+  <nav></nav>
+</header>
+
+<main>
+  <h1>Minhas Reservas</h1>
+  <hr>
+
+  <div class="reservas-filtros">
+    <button class="filtro-btn ativo" data-filtro="ativas">Ativas</button>
+    <button class="filtro-btn" data-filtro="todas">Todas</button>
+  </div>
+
+  <div id="reservas-lista" class="reservas-lista">
+    <p class="reservas-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</p>
+  </div>
+</main>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/app.js"></script>
+<script>
+  let filtroAtivo = "ativas";
+
+  addEventListener("DOMContentLoaded", async () => {
+    await restaurarSessao();
+    renderNav();
+
+
+
+    document.querySelectorAll(".filtro-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filtro-btn").forEach(b => b.classList.remove("ativo"));
+        btn.classList.add("ativo");
+        filtroAtivo = btn.dataset.filtro;
+        carregarReservas();
+      });
+    });
+
+    carregarReservas();
+  });
+
+  async function carregarReservas() {
+    const lista = document.getElementById("reservas-lista");
+    lista.innerHTML = `<p class="reservas-loading"><i class="fa-solid fa-spinner fa-spin"></i> Carregando...</p>`;
+
+    const params = new URLSearchParams();
+    if (filtroAtivo === "ativas") params.append("ativas", "true");
+    // admin vê todas, user vê só as suas
+    if (usuarioAtual.role !== "admin") params.append("usuario_id", usuarioAtual.id);
+
+    const { status, data } = await req("GET", `/api/reservas?${params}`);
+    if (status !== 200) {
+      lista.innerHTML = `<p class="reservas-vazio">Erro ao carregar reservas.</p>`;
+      return;
+    }
+
+    if (data.length === 0) {
+      lista.innerHTML = `<p class="reservas-vazio">Nenhuma reserva encontrada.</p>`;
+      return;
+    }
+
+    lista.innerHTML = "";
+    data.forEach(r => lista.appendChild(criarCardReserva(r)));
+  }
+
+  function criarCardReserva(r) {
+    const card = document.createElement("div");
+    card.className = "reserva-card" + (r.atrasado ? " atrasada" : "") + (r.devolvido ? " devolvida" : "");
+
+    const status = r.devolvido
+      ? `<span class="reserva-badge devolvida"><i class="fa-solid fa-check"></i> Devolvida</span>`
+      : r.atrasado
+        ? `<span class="reserva-badge atrasada"><i class="fa-solid fa-triangle-exclamation"></i> Atrasada</span>`
+        : r.retirado
+          ? `<span class="reserva-badge retirada"><i class="fa-solid fa-box-open"></i> Retirada</span>`
+          : `<span class="reserva-badge pendente"><i class="fa-solid fa-clock"></i> Pendente</span>`;
+
+    const itensHTML = r.itens.map(item => `
+      <div class="reserva-item">
+        <span class="reserva-item-nome">${item.peca_nome}</span>
+        <span class="reserva-item-qty">x${item.quantidade}</span>
+      </div>
+    `).join("");
+
+    const acoes = [];
+    if (!r.devolvido && usuarioAtual.role === "admin") {
+      if (!r.retirado) {
+        acoes.push(`<button class="reserva-btn-entregar" onclick="marcarEntregue(${r.id})">
+          <i class="fa-solid fa-box-open"></i> Marcar entregue
+        </button>`);
+      }
+      acoes.push(`<button class="reserva-btn-devolver" onclick="marcarDevolvida(${r.id})">
+        <i class="fa-solid fa-rotate-left"></i> Marcar devolvida
+      </button>`);
+    }
+    if (usuarioAtual.role === "admin" || (!r.devolvido && !r.retirado)) {
+      acoes.push(`<button class="reserva-btn-deletar" onclick="deletarReserva(${r.id})">
+        <i class="fa-solid fa-trash"></i>
+      </button>`);
+    }
+
+    card.innerHTML = `
+      <div class="reserva-card-header">
+        <div class="reserva-info">
+          <p class="reserva-solicitante">
+            <i class="fa-solid fa-user"></i>
+            <span class="solicitante-texto"></span>
+          </p>
+          <p class="reserva-datas">
+            <i class="fa-solid fa-calendar-check"></i>
+            <span class="data-retirada"></span>
+            &nbsp;→&nbsp;
+            <i class="fa-solid fa-calendar-xmark"></i>
+            <span class="data-devolucao"></span>
+          </p>
+        </div>
+        ${status}
+      </div>
+      <div class="reserva-itens"></div>
+      ${r.observacoes ? `<p class="reserva-obs"><i class="fa-solid fa-note-sticky"></i><span class="obs-texto"></span></p>` : ""}
+      <div class="reserva-acoes"></div>
+    `;
+
+    card.querySelector(".solicitante-texto").textContent = r.solicitante || "";
+    card.querySelector(".data-retirada").textContent     = formatarData(r.data_retirada);
+    card.querySelector(".data-devolucao").textContent    = formatarData(r.data_prevista_devolucao);
+    if (r.observacoes) card.querySelector(".obs-texto").textContent = r.observacoes;
+
+    // itens com textContent
+    const itensContainer = card.querySelector(".reserva-itens");
+    r.itens.forEach(item => {
+        const div   = document.createElement("div");
+        div.className = "reserva-item";
+        const nome  = document.createElement("span");
+        nome.className   = "reserva-item-nome";
+        nome.textContent = item.peca_nome || "";
+        const qty   = document.createElement("span");
+        qty.className    = "reserva-item-qty";
+        qty.textContent  = `x${item.quantidade}`;
+        div.appendChild(nome);
+        div.appendChild(qty);
+        itensContainer.appendChild(div);
+    });
+
+    // ações com addEventListener em vez de onclick inline
+    const acoesContainer = card.querySelector(".reserva-acoes");
+    if (!r.devolvido && usuarioAtual.role === "admin") {
+        if (!r.retirado) {
+            const btn = document.createElement("button");
+            btn.className = "reserva-btn-entregar";
+            btn.innerHTML = `<i class="fa-solid fa-box-open"></i> Marcar entregue`;
+            btn.addEventListener("click", () => marcarEntregue(r.id));
+            acoesContainer.appendChild(btn);
+        }
+        const btn = document.createElement("button");
+        btn.className = "reserva-btn-devolver";
+        btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i> Marcar devolvida`;
+        btn.addEventListener("click", () => marcarDevolvida(r.id));
+        acoesContainer.appendChild(btn);
+    }
+    if (usuarioAtual.role === "admin" || (!r.devolvido && !r.retirado)) {
+        const btn = document.createElement("button");
+        btn.className = "reserva-btn-deletar";
+        btn.innerHTML = `<i class="fa-solid fa-trash"></i>`;
+        btn.addEventListener("click", () => deletarReserva(r.id));
+        acoesContainer.appendChild(btn);
+    }
+    return card;
+  }
+
+  function formatarData(dataStr) {
+    if (!dataStr) return "—";
+    return new Date(dataStr + "T00:00:00").toLocaleDateString("pt-BR");
+  }
+
+  async function marcarEntregue(id) {
+    const { status } = await req("PATCH", `/api/reservas/${id}/entregar`);
+    if (status === 200) { showMessagePopup("Marcada como entregue!"); carregarReservas(); }
+    else showMessagePopup("Erro ao atualizar reserva", true);
+  }
+
+  async function marcarDevolvida(id) {
+    const { status } = await req("PATCH", `/api/reservas/${id}/devolver`);
+    if (status === 200) { showMessagePopup("Marcada como devolvida!"); carregarReservas(); }
+    else showMessagePopup("Erro ao atualizar reserva", true);
+  }
+
+  async function deletarReserva(id) {
+    if (!confirm("Deletar esta reserva?")) return;
+    try {
+      const { status, data } = await req("DELETE", `/api/reservas/${id}`);
+      if (status === 200) {
+        showMessagePopup("Reserva deletada!");
+        carregarReservas();
+      }
+    } catch (err) {
+      if (err.status === 403) {
+        showMessagePopup(err.message, true);
+      } else {
+        showMessagePopup("Erro ao deletar reserva", true);
+      }
+    }
+  }
+</script>
+</body>
+</html>

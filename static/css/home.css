@@ -1,0 +1,505 @@
+main {
+    display: block;
+}
+
+h1 {
+    font-size: 2rem;
+    color: var(--accent-blue);
+    letter-spacing: 0.08em;
+}
+
+.tipos {
+    display: flex;
+    padding: 1rem 2rem 1rem 2rem;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+}
+.tipos .tipo-div {
+    display: flex;
+    gap: 1rem;
+}
+.tipo-div button {
+    padding: 0.7rem;
+    font-size: 0.9rem;
+    background-color: var(--popup-bg);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 2rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+button.active,
+.tipo-div button:hover {
+    background-color: var(--accent);
+    color: var(--popup-bg);
+}
+.search-bar input {
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 2rem;
+    background-color: var(--popup-bg);
+    color: var(--text-1-color);
+    font-size: 0.9rem;
+    width: 400px;
+    transition: border-color 0.3s;
+}
+.search-bar input:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+}
+
+#cart-btn {
+    background: var(--accent-blue);
+    color: var(--text-1-color);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-grid {
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1.5rem;
+}
+
+.card {
+    background-color: var(--fg-grey);
+    width: 210px;
+    padding: 1rem;
+    border-radius: 1rem;
+    margin-top: 1rem;
+    position: relative;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+    cursor: pointer;
+    transition: scale 0.3s, box-shadow 0.3s;
+}
+.card.out-of::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 1rem;
+}
+
+.card:hover {
+    scale: 1.05;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+}
+
+.card img {
+    width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    display: block;
+}
+
+.quantity-box {
+    background-color: var(--accent-yellow);
+    color: var(--text-dark);
+    width: fit-content;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    position: absolute;
+    right: 1.5rem;
+    margin-top: -2.3rem;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.quantity-box p {
+    color: var(--text-dark);
+}
+p.tipo {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    background-color: var(--popup-bg);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 0.5rem;
+    width: fit-content;
+}
+
+.nome {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-top: 0.5rem;
+    color: var(--accent-blue);
+}
+
+.desc {
+    font-size: 0.85rem;
+    color: var(--text-2-color);
+    margin-top: 0.25rem;
+}
+
+.add {
+    background-color: transparent;
+    color: var(--accent-yellow);
+    border: 1px solid var(--accent-yellow);
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    margin-top: 0.75rem;
+    width: 100%;
+    transition: color 0.3s, background-color 0.3s;
+    letter-spacing: 0.05em;
+    font-size: 0.85rem;
+}
+
+.add:hover {
+    background-color: var(--accent-yellow);
+    color: var(--bg-color);
+}
+
+#popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(6px);
+}
+
+#popup {
+    background: var(--popup-bg);
+    border: 1px solid var(--border-color);
+    border-top: 2px solid var(--accent-yellow);
+    border-radius: 12px;
+    padding: 28px;
+    width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+#popup h2 {
+    font-size: 18px;
+    color: var(--accent-yellow);
+    letter-spacing: 0.08em;
+}
+
+#popup input,
+#popup select,
+#popup textarea {
+    padding: 10px 12px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-1-color);
+    font-family: "Chakra Petch", sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+#popup input:focus,
+#popup select:focus,
+#popup textarea:focus {
+    border-color: var(--accent-yellow);
+}
+
+#popup textarea {
+    resize: none;
+}
+
+#popup input[type="file"] {
+    color: var(--text-2-color);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+#popup input[type="file"]::file-selector-button {
+    font-family: "Chakra Petch", sans-serif;
+    background: var(--border-color);
+    color: var(--text-1-color);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: background 0.2s;
+}
+
+#popup input[type="file"]::file-selector-button:hover {
+    background: var(--border-hover);
+}
+
+.popup-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+#popup-cancelar {
+    padding: 8px 18px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-2-color);
+    font-family: "Chakra Petch", sans-serif;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+#popup-cancelar:hover {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+}
+
+#popup-salvar {
+    padding: 8px 18px;
+    background: var(--accent-yellow);
+    border: none;
+    border-radius: 6px;
+    color: var(--text-dark);
+    font-family: "Chakra Petch", sans-serif;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: opacity 0.2s;
+}
+
+#popup-salvar:hover {
+    opacity: 0.85;
+}
+
+/* ─── Add to Cart Popup Styles ─────────────────────────────────────────────── */
+
+.add-cart-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 500;
+}
+
+.add-cart-popup {
+    background: var(--popup-bg);
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 400px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    border-top: 2px solid var(--accent-blue);
+}
+
+.add-cart-popup h3 {
+    color: var(--accent-blue);
+    margin-bottom: 10px;
+}
+
+.add-cart-popup p {
+    color: var(--text-2-color);
+    margin-bottom: 15px;
+}
+
+.add-cart-popup label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-1-color);
+}
+
+.add-cart-popup input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-color);
+    color: var(--text-1-color);
+    margin-bottom: 15px;
+    box-sizing: border-box;
+}
+
+.add-cart-popup input:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+}
+
+.add-cart-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.add-cart-buttons button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.2s;
+}
+
+.add-cart-cancel {
+    background: var(--border-color);
+    color: var(--text-1-color);
+}
+
+.add-cart-cancel:hover {
+    opacity: 0.85;
+}
+
+.add-cart-confirm {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+}
+
+.add-cart-confirm:hover {
+    opacity: 0.85;
+}
+
+/* ─── Cart Modal Styles ────────────────────────────────────────────────────── */
+
+.cart-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 600;
+    overflow: auto;
+}
+
+.cart-modal {
+    background: var(--popup-bg);
+    padding: 30px;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    max-height: 80vh;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-top: 2px solid var(--accent-yellow);
+}
+
+.cart-modal h2 {
+    color: var(--accent-yellow);
+    margin-bottom: 20px;
+}
+
+.cart-modal-items {
+    margin: 20px 0;
+}
+
+.cart-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.cart-item-info {
+    flex: 1;
+}
+
+.cart-item-name {
+    margin: 0;
+    font-weight: bold;
+    color: var(--text-1-color);
+}
+
+.cart-item-qty {
+    margin: 5px 0 0 0;
+    color: var(--text-2-color);
+}
+
+.cart-item-remove {
+    background: var(--accent-red);
+    color: var(--text-1-color);
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.cart-item-remove:hover {
+    opacity: 0.85;
+}
+
+.cart-modal label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-1-color);
+    margin-top: 20px;
+}
+
+.cart-modal input,
+.cart-modal textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-color);
+    color: var(--text-1-color);
+    box-sizing: border-box;
+}
+
+.cart-modal input:focus,
+.cart-modal textarea:focus {
+    outline: none;
+    border-color: var(--accent-yellow);
+}
+
+.cart-modal textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.cart-modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.cart-modal-actions button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.2s;
+}
+
+.cart-modal-cancel {
+    background: var(--border-color);
+    color: var(--text-1-color);
+}
+
+.cart-modal-cancel:hover {
+    opacity: 0.85;
+}
+
+.cart-modal-confirm {
+    background: var(--accent-yellow);
+    color: var(--text-dark);
+}
+
+.cart-modal-confirm:hover {
+    opacity: 0.85;
+}

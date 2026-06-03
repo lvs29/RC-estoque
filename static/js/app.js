@@ -427,7 +427,7 @@ function renderReservas(reservas) {
         const r        = reservas[index];
         const itensStr = r.itens.map(item => `${item.peca_nome} (x${item.quantidade})`).join(", ");
         row.querySelector(".reserva-itens").textContent       = itensStr;
-        row.querySelector(".reserva-solicitante").textContent = r.solicitante;
+        row.querySelector(".reserva-solicitante").textContent = r.usuario_nome || r.solicitante || "";
         row.querySelector(".reserva-quantidade").textContent  = r.itens.reduce((sum, item) => sum + item.quantidade, 0);
     });
 }

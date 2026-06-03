@@ -141,7 +141,7 @@
       <div class="reserva-acoes"></div>
     `;
 
-    card.querySelector(".solicitante-texto").textContent = r.solicitante || "";
+    card.querySelector(".solicitante-texto").textContent = r.usuario_nome || r.solicitante || "";
     card.querySelector(".data-retirada").textContent     = formatarData(r.data_retirada);
     card.querySelector(".data-devolucao").textContent    = formatarData(r.data_prevista_devolucao);
     if (r.observacoes) card.querySelector(".obs-texto").textContent = r.observacoes;

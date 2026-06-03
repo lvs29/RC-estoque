@@ -121,12 +121,14 @@ def _peca_dict(p: Peca) -> dict:
     }
 
 def _reserva_dict(r: Reserva) -> dict:
+    # Sempre usar o nome atual do usuário se disponível, senão usar o snapshot
+    nome_exibido = r.usuario.nome if r.usuario else r.solicitante
     return {
         "id": r.id,
         "usuario_id": r.usuario_id,
         "usuario_nome":
             r.usuario.nome if r.usuario else None,
-        "solicitante": r.solicitante,
+        "solicitante": nome_exibido,
         "data_retirada": r.data_retirada,
         "data_prevista_devolucao":
             r.data_prevista_devolucao,
@@ -225,6 +227,14 @@ def atualizar_usuario(usuario_id: int, **campos) -> dict:
                 raise ValueError("Role inválida")
             if usuario_id == 1 and campos["role"] == "user":
                 raise ValueError("O usuário admin não pode ser rebaixado")
+        
+        # Se o nome está sendo alterado, sincronizar com as reservas
+        if "nome" in campos:
+            novo_nome = campos["nome"]
+            db.query(Reserva).filter(
+                Reserva.usuario_id == usuario_id
+            ).update({Reserva.solicitante: novo_nome})
+        
         for campo in ("nome", "username", "role"):
             if campo in campos:
                 setattr(u, campo, campos[campo])

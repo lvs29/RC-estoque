@@ -105,8 +105,7 @@ def post_login():
     resp.set_cookie(
         "token",
         token,
-        httponly=True,
-        secure=True,
+        secure=False,
         samesite="Strict",
         max_age=60 * 60 * 24 * 7,  # 7 dias
         path="/",

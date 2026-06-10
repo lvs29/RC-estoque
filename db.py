@@ -168,7 +168,7 @@ def _garantir_admin():
     try:
         existe = db.query(Usuario).filter_by(role="admin").first()
         if not existe:
-            criar_usuario("Admin", "admin", os.environ.get("ADMIN_SENHA", ""), role="admin")
+            criar_usuario("Admin", "admin", "admin", role="admin")
             print("[db] Admin criado — usuario: admin | senha: admin")
     finally:
         db.close()

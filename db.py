@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, text, Column, Integer, String, Text, Forei
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 
 DB_PATH = os.environ.get("DB_PATH", "database.db")
-DATABASE_URL = f"sqlite:///{DB_PATH}"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_engine(
     DATABASE_URL,
